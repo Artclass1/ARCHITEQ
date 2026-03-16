@@ -79,18 +79,17 @@ const styles = StyleSheet.create({
     color: '#a1a1aa',
   },
   imageGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
     marginTop: 20,
   },
   imageContainer: {
-    width: '48%',
-    marginBottom: 20,
+    width: '100%',
+    marginBottom: 30,
   },
   image: {
     width: '100%',
-    height: 200,
+    height: 300,
     objectFit: 'cover',
   },
   footer: {
