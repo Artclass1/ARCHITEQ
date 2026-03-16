@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { generatePlan, generateImage, type ArchitecturePlan } from './services/gemini';
 import { ArchitecturePdf } from './components/PdfDocument';
-import { PDFDownloadLink } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 import { Loader2, Download, Sparkles, Building2, Layers, Hammer, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -12,6 +12,33 @@ export default function App() {
   const [images, setImages] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [loadingStep, setLoadingStep] = useState('');
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!plan || images.length < 3) return;
+    setIsDownloadingPdf(true);
+    try {
+      // Sanitize filename to prevent .tmp downloads in certain browsers
+      const safeTitle = plan.title.replace(/[^a-z0-9]/gi, '-').replace(/-+/g, '-').toLowerCase();
+      const fileName = `${safeTitle}-plan.pdf`;
+      
+      const blob = await pdf(<ArchitecturePdf plan={plan} images={images} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,18 +85,14 @@ export default function App() {
             <span className="font-serif text-lg font-medium tracking-wide text-zinc-100 uppercase">ArchiGen</span>
           </div>
           {plan && images.length === 3 && (
-            <PDFDownloadLink
-              document={<ArchitecturePdf plan={plan} images={images} />}
-              fileName={`${plan.title.replace(/\s+/g, '-').toLowerCase()}-plan.pdf`}
-              className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-900 text-sm font-medium rounded-full hover:bg-white transition-colors"
+            <button
+              onClick={handleDownloadPdf}
+              disabled={isDownloadingPdf}
+              className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-900 text-sm font-medium rounded-full hover:bg-white transition-colors disabled:opacity-50"
             >
-              {({ loading }) => (
-                <>
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  {loading ? 'Preparing PDF...' : 'Download Plan'}
-                </>
-              )}
-            </PDFDownloadLink>
+              {isDownloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {isDownloadingPdf ? 'Preparing PDF...' : 'Download Plan'}
+            </button>
           )}
         </div>
       </header>
