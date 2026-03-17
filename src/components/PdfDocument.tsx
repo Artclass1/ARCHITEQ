@@ -158,6 +158,18 @@ export const ArchitecturePdf = ({ plan, images }: PdfDocumentProps) => (
         </View>
       ))}
 
+      {plan.dimensions && plan.dimensions.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Dimensions</Text>
+          {plan.dimensions.map((dim, i) => (
+            <View key={i} style={{ marginBottom: 8, flexDirection: 'row' }}>
+              <Text style={{ ...styles.itemTitle, width: '40%' }}>{dim.area}</Text>
+              <Text style={{ ...styles.itemDesc, width: '60%' }}>{dim.size}</Text>
+            </View>
+          ))}
+        </>
+      )}
+
       <Text style={styles.sectionTitle}>Construction Phases</Text>
       {plan.constructionPhases.map((phase, i) => (
         <View key={i} style={{ marginBottom: 12 }}>
@@ -171,6 +183,53 @@ export const ArchitecturePdf = ({ plan, images }: PdfDocumentProps) => (
         <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
       </View>
     </Page>
+
+    {/* Content Page 3 (Optional: Costing & Resources) */}
+    {(plan.estimatedCost || plan.localResources || plan.executionStrategy) && (
+      <Page size="A4" style={styles.page}>
+        {plan.estimatedCost && plan.estimatedCost.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Estimated Costing</Text>
+            {plan.estimatedCost.map((cost, i) => (
+              <View key={i} style={{ marginBottom: 8, flexDirection: 'row' }}>
+                <Text style={{ ...styles.itemTitle, width: '60%' }}>{cost.category}</Text>
+                <Text style={{ ...styles.itemDesc, width: '40%' }}>{cost.cost}</Text>
+              </View>
+            ))}
+            {plan.totalEstimatedCost && (
+              <View style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #333', flexDirection: 'row' }}>
+                <Text style={{ ...styles.itemTitle, width: '60%' }}>Total Estimated Cost</Text>
+                <Text style={{ ...styles.itemTitle, width: '40%' }}>{plan.totalEstimatedCost}</Text>
+              </View>
+            )}
+          </>
+        )}
+
+        {plan.localResources && plan.localResources.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Local Resources</Text>
+            {plan.localResources.map((resource, i) => (
+              <View key={i} style={styles.listItem}>
+                <Text style={styles.bullet}>•</Text>
+                <Text style={styles.text}>{resource}</Text>
+              </View>
+            ))}
+          </>
+        )}
+
+        {plan.executionStrategy && (
+          <>
+            <Text style={styles.sectionTitle}>Execution Strategy</Text>
+            <Text style={styles.text}>{plan.executionStrategy}</Text>
+          </>
+        )}
+
+        <View style={styles.footer} fixed>
+          <Text>{plan.title}</Text>
+          <Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+        </View>
+      </Page>
+    )}
 
     {/* Renderings Page */}
     {images.length > 1 && (
