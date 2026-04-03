@@ -91,14 +91,23 @@ const planSchemaProperties = {
   executionStrategy: { type: Type.STRING, description: "Strategy to complete the project smoothly and fastly" }
 };
 
-export async function generatePlan(prompt: string): Promise<ArchitecturePlan> {
-  const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
-    contents: `You are a master architect. Create a comprehensive, professional architectural plan based on the following concept: "${prompt}".
+export async function generatePlan(prompt: string, image?: { data: string, mimeType: string }): Promise<ArchitecturePlan> {
+  const promptText = `You are a master architect. Create a comprehensive, professional architectural plan based on the following concept: "${prompt}".
     The design should perfectly reflect the user's requested style. If no style is specified, default to a highly aesthetic, professional design.
     Ensure all elements (materials, layout, phases) are cohesive and realistic.
     Include dimensions, estimated costs, local resources, and an execution strategy for fast and smooth completion if implied or as a professional baseline.
-    CRITICAL: The imagePrompts MUST perfectly describe this specific project's unique style, materials, and context so the resulting images match the plan exactly.`,
+    CRITICAL: The imagePrompts MUST perfectly describe this specific project's unique style, materials, and context so the resulting images match the plan exactly.`;
+
+  const contents = image 
+    ? [
+        { text: promptText },
+        { inlineData: { data: image.data, mimeType: image.mimeType } }
+      ]
+    : promptText;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3.1-pro-preview",
+    contents: contents,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -181,12 +190,6 @@ export async function generateImage(prompt: string): Promise<string> {
           text: `Photorealistic architectural rendering, highly detailed, 8k resolution, professional architectural photography, architectural digest style. ${prompt}`,
         },
       ],
-    },
-    config: {
-      // @ts-ignore - imageConfig is valid but might not be fully typed in all SDK versions
-      imageConfig: {
-        aspectRatio: "16:9"
-      }
     }
   });
 
@@ -195,5 +198,7 @@ export async function generateImage(prompt: string): Promise<string> {
       return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
     }
   }
+  
+  console.error("Image generation response:", JSON.stringify(response, null, 2));
   throw new Error("Image generation failed or returned no image data.");
 }

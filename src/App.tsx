@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { generatePlan, generateImage, chatAndUpdatePlan, type ArchitecturePlan } from './services/gemini';
 import { ArchitecturePdf } from './components/PdfDocument';
 import { pdf } from '@react-pdf/renderer';
-import { Loader2, Download, Sparkles, Building2, Layers, Hammer, ArrowRight, MessageSquare, Send, Ruler, DollarSign, MapPin, Clock, Trash2 } from 'lucide-react';
+import { Loader2, Download, Sparkles, Building2, Layers, Hammer, ArrowRight, MessageSquare, Send, Ruler, DollarSign, MapPin, Clock, Trash2, ImagePlus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -13,6 +13,8 @@ export default function App() {
   const [error, setError] = useState('');
   const [loadingStep, setLoadingStep] = useState('');
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ data: string, mimeType: string, previewUrl: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Chat state
   const [chatMessage, setChatMessage] = useState('');
@@ -35,7 +37,7 @@ export default function App() {
   };
 
   const handleDownloadPdf = async () => {
-    if (!plan || images.length === 0) return;
+    if (!plan) return;
     setIsDownloadingPdf(true);
     try {
       const safeTitle = plan.title.replace(/[^a-z0-9]/gi, '-').replace(/-+/g, '-').toLowerCase();
@@ -59,9 +61,35 @@ export default function App() {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = (reader.result as string).split(',')[1];
+      setSelectedImage({ 
+        data: base64String, 
+        mimeType: file.type, 
+        previewUrl: URL.createObjectURL(file) 
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeSelectedImage = () => {
+    if (selectedImage) {
+      URL.revokeObjectURL(selectedImage.previewUrl);
+      setSelectedImage(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt.trim()) return;
+    if (!prompt.trim() && !selectedImage) return;
 
     setIsGenerating(true);
     setError('');
@@ -71,7 +99,7 @@ export default function App() {
 
     try {
       setLoadingStep('Conceptualizing architecture...');
-      const generatedPlan = await generatePlan(prompt);
+      const generatedPlan = await generatePlan(prompt, selectedImage || undefined);
       setPlan(generatedPlan);
 
       setLoadingStep('Rendering architectural visualizations...');
@@ -139,7 +167,7 @@ export default function App() {
             <Building2 className="w-5 h-5 text-zinc-100" />
             <span className="font-serif text-lg font-medium tracking-wide text-zinc-100 uppercase">ArchiGen</span>
           </div>
-          {plan && images.length >= 3 && (
+          {plan && (
             <button
               onClick={handleDownloadPdf}
               disabled={isDownloadingPdf}
@@ -182,8 +210,42 @@ export default function App() {
                 }}
                 placeholder="e.g., A minimalist concrete cliffside retreat in Big Sur. I want it to have large glass windows, a green roof, and use locally sourced timber..."
                 className="w-full bg-zinc-900/50 border border-white/10 rounded-3xl py-4 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-500 transition-all resize-none min-h-[140px]"
-                required
+                required={!selectedImage}
               />
+              
+              {selectedImage && (
+                <div className="absolute bottom-16 left-4">
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-white/20">
+                    <img src={selectedImage.previewUrl} alt="Upload preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={removeSelectedImage}
+                      className="absolute top-1 right-1 p-0.5 bg-black/60 hover:bg-red-500/80 text-white rounded-full transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="absolute bottom-3 left-4">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  ref={fileInputRef} 
+                  onChange={handleImageUpload} 
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 text-zinc-400 hover:text-zinc-100 hover:bg-white/5 rounded-full transition-colors"
+                  title="Upload sketch or photo"
+                >
+                  <ImagePlus className="w-5 h-5" />
+                </button>
+              </div>
+
               <div className="absolute bottom-3 right-3">
                 <button
                   type="submit"
